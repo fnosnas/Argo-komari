@@ -1,33 +1,26 @@
 #!/usr/bin/env bash
 
-# 定义变量（如果环境变量没给，则使用默认值）
+# 变量设置
 ARGO_PORT=${PORT:-8080}
 UUID=${UUID:-"fd2fbdc1-1ef5-4831-adb3-ffddc0303a30"}
 
-# 1. 启动简单的 VLESS 节点协议 (让 Argo 有东西可以转发)
-# 这里我们使用一个轻量级的二进制或简单的转发逻辑
+# 1. 运行节点环境 (Xray)
+wget -qO /tmp/xray.zip https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip
+unzip -o /tmp/xray.zip -d /tmp/
 cat <<EOF > /tmp/config.json
-{
-    "inbounds": [{"port": $ARGO_PORT,"protocol": "vless","settings": {"clients": [{"id": "$UUID"}],"decryption": "none"}}],
-    "outbounds": [{"protocol": "freedom"}]
-}
+{"inbounds":[{"port":$ARGO_PORT,"protocol":"vless","settings":{"clients":[{"id":"$UUID"}],"decryption":"none"},"streamSettings":{"network":"ws"}}],"outbounds":[{"protocol":"freedom"}]}
 EOF
-# 下载并运行 xray 作为后端协议
-wget -qO /tmp/xray https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip
-unzip -o /tmp/xray -d /tmp/
 /tmp/xray -c /tmp/config.json >/dev/null 2>&1 &
 
-# 2. 安装并启动 Komari 探针
+# 2. 安装 Komari 探针 (适配非 Root)
 if [ -n "$KOMARI_URL" ] && [ -n "$KOMARI_KEY" ]; then
-    echo "正在启动 Komari 探针..."
-    # 移除 sudo 依赖以支持非 root 环境
     curl -sL https://raw.githubusercontent.com/komari-monitor/komari-agent/refs/heads/main/install.sh | bash -s -- -e "$KOMARI_URL" -t "$KOMARI_KEY" >/dev/null 2>&1 &
 fi
 
-# 3. 启动 Argo 隧道
-echo "正在启动 Argo 隧道..."
+# 3. 运行 Argo 隧道并保持前台运行 (防止容器退出)
 wget -qO /tmp/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
 chmod +x /tmp/cloudflared
 
-# 使用 Token 运行固定隧道
-/tmp/cloudflared tunnel --no-autoupdate run --token "$ARGO_TOKEN"
+echo "启动 Argo 隧道..."
+# 用 exec 确保 cloudflared 作为主进程，如果它挂了，容器会自动重启
+exec /tmp/cloudflared tunnel --no-autoupdate run --token "$ARGO_TOKEN"
