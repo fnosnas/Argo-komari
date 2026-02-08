@@ -19,10 +19,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # 这一步是关键：把仓库名强制转为小写，解决报错
+      - name: lowercase repo name
+        run: |
+          echo "REPO=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          # 镜像名字会是 ghcr.io/你的用户名/项目名:latest
-          tags: ghcr.io/${{ github.repository }}:latest
+          # 使用转换后的小写变量
+          tags: ghcr.io/${{ env.REPO }}:latest
