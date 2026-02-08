@@ -8,6 +8,6 @@ export ARGO_DOMAIN="你的域名" \
 export ARGO_TOKEN="你的Token" \
 export UUID="你的UUID" \
 export PORT="8080" \
-export KOMARI_URL="[https://komari.afnos86.xx.kg](https://komari.afnos86.xx.kg)" \
+export KOMARI_URL="https://xxxxxx" \
 export KOMARI_KEY="你的密钥" \
 && bash <(curl -sL [https://raw.githubusercontent.com/你的用户名/项目名/main/entrypoint.sh](https://raw.githubusercontent.com/你的用户名/项目名/main/entrypoint.sh))
